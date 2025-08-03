@@ -1,121 +1,96 @@
-import { useEffect, useState } from "react"
-import { Layout } from "../components/Layout"
-import { getProducts, deleteProduct, searchProducts } from "../services/products"
-import { useAuth } from "../context/AuthContext"
+import { useEffect, useState } from "react";
+import { Layout } from "../components/Layout";
+import { getProducts, deleteProduct, searchProducts, updateProduct } from "../services/products";
+import { useAuth } from "../context/AuthContext";
 
 const Home = () => {
-  const [products, setProducts] = useState([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isSearching, setIsSearching] = useState(false)
+  const [products, setProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [formData, setFormData] = useState({ name: "", price: "", category: "" });
 
-  const { user } = useAuth()
+  const { user } = useAuth();
 
   const fetchProducts = async () => {
-    const response = await getProducts()
-    const responseToJson = await response.json()
-
+    const response = await getProducts();
+    const responseToJson = await response.json();
     if (response.ok) {
-      setProducts(responseToJson.data)
+      setProducts(responseToJson.data);
     }
-  }
+  };
 
-  const handleClick = async (id) => {
-    if (confirm("Esta seguro que quieres borrar el producto?")) {
-      const response = await deleteProduct(id)
-      if (!response.ok) {
-        alert("Error al borrar producto.")
+  const handleDelete = async (id) => {
+    if (confirm("¿Seguro que querés borrar el producto?")) {
+      const response = await deleteProduct(id);
+      if (response.ok) {
+        alert("Producto borrado.");
+        fetchProducts();
       } else {
-        alert("Producto borrado con éxito.")
-        fetchProducts()
+        alert("Error al borrar.");
       }
     }
-  }
+  };
 
   const handleSearch = async (term) => {
-    const searchValue = term !== undefined ? term : searchTerm;
-
-    if (searchValue.trim() === "") {
-      fetchProducts();
-      return;
-    }
+    const value = term ?? searchTerm;
+    if (value.trim() === "") return fetchProducts();
 
     setIsSearching(true);
     try {
-      const response = await searchProducts(searchValue);
-      const responseToJson = await response.json();
-
-      if (response.ok) {
-        setProducts(responseToJson.data);
-      }
-    } catch (error) {
-      console.error("Error searching products:", error);
+      const response = await searchProducts(value);
+      const data = await response.json();
+      if (response.ok) setProducts(data.data);
     } finally {
       setIsSearching(false);
     }
   };
 
-  useEffect(() => {
-    fetchProducts()
-  }, [])
+  const handleEditClick = (product) => {
+    setEditingProduct(product._id);
+    setFormData({
+      name: product.name,
+      price: product.price,
+      category: product.category
+    });
+  };
 
-  // Efecto para la búsqueda en tiempo real
-  useEffect(() => {
-    const delaySearch = setTimeout(() => {
-      handleSearch(searchTerm);
-    }, 500); // Espera 500ms después de que el usuario deje de escribir
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
-    return () => clearTimeout(delaySearch);
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    const res = await updateProduct(editingProduct, formData);
+    if (res.ok) {
+      alert("Producto actualizado.");
+      setEditingProduct(null);
+      fetchProducts();
+    } else {
+      alert("Error al actualizar.");
+    }
+  };
+
+  useEffect(() => { fetchProducts(); }, []);
+  useEffect(() => {
+    const delay = setTimeout(() => handleSearch(searchTerm), 500);
+    return () => clearTimeout(delay);
   }, [searchTerm]);
 
   return (
     <Layout>
       <h1>Bienvenido a nuestra tienda de productos artesanales</h1>
-      <p>Descubrí nuestra selección exclusiva de productos únicos hechos a mano. Calidad y diseño en cada detalle.</p>
 
-      <div className="search-container" style={{ marginBottom: "20px", position: "relative" }}>
+      <div className="search-container">
         <input
           type="text"
           placeholder="Buscar productos..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            padding: "8px",
-            width: "300px",
-            paddingRight: searchTerm ? "40px" : "8px"
-          }}
         />
-        {isSearching && (
-          <span style={{
-            position: "absolute",
-            right: searchTerm ? "40px" : "10px",
-            top: "50%",
-            transform: "translateY(-50%)",
-            fontSize: "12px",
-            color: "#666"
-          }}>
-            Buscando...
-          </span>
-        )}
-        {searchTerm && (
-          <button
-            onClick={() => {
-              setSearchTerm("");
-            }}
-            style={{
-              position: "absolute",
-              right: "5px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "5px",
-              fontSize: "16px"
-            }}
-          >
-            ✕
-          </button>
-        )}
+        {isSearching && <span>Buscando...</span>}
+        {searchTerm && <button onClick={() => setSearchTerm("")}>✕</button>}
       </div>
 
       <section>
@@ -123,21 +98,34 @@ const Home = () => {
           <p>No se encontraron productos.</p>
         ) : (
           products.map(product => (
-            <div key={product._id}>
-              <p><b>Nombre:</b> {product.name}</p>
-              <p><b>Precio:</b> {product.price}</p>
-              <p><b>Categoria:</b> {product.category}</p>
-              {
-                user && <div className="cont-button-product">
-                  <button onClick={() => handleClick(product._id)}>Borrar</button>
-                </div>
-              }
+            <div key={product._id} style={{ border: "1px solid #ccc", padding: "10px", marginBottom: "10px" }}>
+              {editingProduct === product._id ? (
+                <form onSubmit={handleEditSubmit}>
+                  <input type="text" name="name" value={formData.name} onChange={handleEditChange} />
+                  <input type="text" name="price" value={formData.price} onChange={handleEditChange} />
+                  <input type="text" name="category" value={formData.category} onChange={handleEditChange} />
+                  <button type="submit">Guardar</button>
+                  <button type="button" onClick={() => setEditingProduct(null)}>Cancelar</button>
+                </form>
+              ) : (
+                <>
+                  <p><b>Nombre:</b> {product.name}</p>
+                  <p><b>Precio:</b> {product.price}</p>
+                  <p><b>Categoría:</b> {product.category}</p>
+                  {user && (
+                    <div className="button-group">
+                      <button onClick={() => handleDelete(product._id)}>Borrar</button>
+                      <button onClick={() => handleEditClick(product)}>Editar</button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           ))
         )}
       </section>
     </Layout>
-  )
-}
+  );
+};
 
-export { Home }
+export { Home };
