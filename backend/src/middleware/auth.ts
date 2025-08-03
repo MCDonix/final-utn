@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express"
 import jwt from "jsonwebtoken"
-process.loadEnvFile()
+import dotenv from "dotenv"
+
+dotenv.config()
 
 // analizar el token:
 // para analizar de que existe
@@ -23,10 +25,10 @@ const protect = async (req: Request, res: Response, next: NextFunction): Promise
       })
     }
 
-    const secreyKey = process.env.JWT_SECRET!
+    const secretKey = process.env.JWT_SECRET!
 
     // validar token
-    const decode = jwt.verify(token, secreyKey)
+    const decode = jwt.verify(token, secretKey)
 
     if (decode) {
       console.log("Puedes pasar")

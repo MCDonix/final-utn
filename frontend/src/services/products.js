@@ -1,7 +1,6 @@
-// averiguar como usar una variable de entorno en un proyecto de vite/react
-
-// reemplazar por la variable de entorno con la misma data
-const BASE_API = "http://localhost:1234/api"
+// Variables de entorno en Vite se acceden a través de import.meta.env
+// Las variables deben comenzar con VITE_ para ser accesibles en el cliente
+const BASE_API = import.meta.env.VITE_API_URL
 
 const getProducts = async () => {
   const response = await fetch(BASE_API + "/products")
@@ -24,4 +23,9 @@ const deleteProduct = async (id) => {
   return response
 }
 
-export { getProducts, createProduct, deleteProduct }
+const searchProducts = async (searchTerm) => {
+  const response = await fetch(`${BASE_API}/products/search?query=${encodeURIComponent(searchTerm)}`)
+  return response
+}
+
+export { getProducts, createProduct, deleteProduct, searchProducts }

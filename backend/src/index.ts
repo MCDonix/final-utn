@@ -6,8 +6,9 @@ import { authRouter } from "./routes/authRouter"
 
 import cors from "cors"
 import { protect } from "./middleware/auth"
+import dotenv from "dotenv"
 
-process.loadEnvFile()
+dotenv.config()
 
 const PORT = process.env.PORT || 3000
 

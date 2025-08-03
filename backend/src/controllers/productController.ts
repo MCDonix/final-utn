@@ -87,4 +87,39 @@ const updateProduct = async (req: Request, res: Response): Promise<any> => {
   }
 }
 
-export { getAllProducts, addNewProduct, deleteProduct, updateProduct }
+const searchProducts = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        message: "El término de búsqueda es requerido"
+      });
+    }
+
+    const searchTerm = String(query);
+
+    // Búsqueda parcial e insensible a mayúsculas/minúsculas
+    const products = await Product.find({
+      $or: [
+        { name: { $regex: searchTerm, $options: 'i' } },
+        { category: { $regex: searchTerm, $options: 'i' } }
+      ]
+    });
+
+    res.json({
+      success: true,
+      message: "búsqueda de productos realizada con éxito",
+      data: products
+    });
+  } catch (error) {
+    const err = error as Error;
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+export { getAllProducts, addNewProduct, deleteProduct, updateProduct, searchProducts }

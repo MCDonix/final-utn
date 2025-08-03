@@ -2,8 +2,9 @@ import { Request, Response } from "express";
 import bcryptjs from "bcryptjs"
 import { Auth } from "../models/authModel";
 import jwt from "jsonwebtoken"
+import dotenv from "dotenv"
 
-process.loadEnvFile()
+dotenv.config()
 
 interface User {
   username: string
@@ -52,13 +53,13 @@ const login = async (req: Request, res: Response): Promise<any> => {
 
     const user = await Auth.findOne({ email })
     if (!user) {
-      return res.status(401).json({ success: false, message: "unathorized" })
+      return res.status(401).json({ success: false, message: "Usuario no encontrado" })
     }
 
     const validatePassword = await bcryptjs.compare(password, user.password)
 
     if (!validatePassword) {
-      return res.status(401).json({ success: false, message: "unathorized" })
+      return res.status(401).json({ success: false, message: "Contraseña incorrecta" })
     }
 
     // generar el permiso que permita el acceso a los productos
@@ -70,7 +71,7 @@ const login = async (req: Request, res: Response): Promise<any> => {
     const payload = { _id: user._id, username: user.username }
     const secretKey = process.env.JWT_SECRET!
 
-    const token = jwt.sign(payload, secretKey, { expiresIn: "1m" })
+    const token = jwt.sign(payload, secretKey, { expiresIn: "1h" })
 
     res.json({
       success: true,
